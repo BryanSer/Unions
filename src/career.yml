@@ -1,0 +1,18 @@
+Owner:
+    Prefix: '§6工会会长'
+    Name: '会长'
+Admin:
+    Prefix: '§b副会长'
+    Name: '副会长'
+Elder:
+    Prefix: '§a§l长老'
+    Name: '长老'
+Elite:
+    Prefix: '§2精英'
+    Name: '精英'
+Member:
+    Prefix: '§a优秀成员'
+    Name: '优秀成员'
+Newcomer:
+    Prefix: '新成员'
+    Name: '新成员'
