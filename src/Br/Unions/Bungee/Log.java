@@ -10,7 +10,9 @@ import Br.Unions.Data;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,16 +31,20 @@ public class Log {
 
     private String UnionName;
     private List<String> Logs = new ArrayList<>();
-    
-    public static Map<String,Log> UnionLogs = new HashMap<>();
-    
-    public Log(String uni){
+
+    public static Map<String, Log> UnionLogs = new HashMap<>();
+
+    public Log(String uni) {
         this.UnionName = uni;
         this.load();
     }
 
     private File getFile() {
         return new File(Data.Plugin.getDataFolder(), this.UnionName + ".log");
+    }
+
+    public void log(String s) {
+        Logs.add(String.format("[%s %s] %s", getDate(), getTime(), s));
     }
 
     public List<String> getLog(int page) {
@@ -83,6 +89,18 @@ public class Log {
             Logger.getLogger(Log.class.getName()).log(Level.SEVERE, null, ex);
         }
 
+    }
+
+    public String getDate() {
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        Date date = new Date();
+        return df.format(date);
+    }
+
+    public String getTime() {
+        SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
+        Date date = new Date();
+        return df.format(date);
     }
 
 };

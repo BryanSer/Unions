@@ -38,7 +38,7 @@ public class MessageManager {
 
     public enum MessageType {
         CreateUnion("CU", (m) -> {//创建或删除公会 >> 公会名 操作者 (+/-)
-            ProxiedPlayer p = BungeeCord.getInstance().getPlayer(m.getSender());
+            ProxiedPlayer p = m.getSenderProxied();
             Boolean has = UserManager.operateUser(p.getUniqueId(), User::hasUnion);
             if (has == null || !has) {
                 boolean hasuni = UnionManager.operateUnion(m.getTargetUnion(), (t) -> {
@@ -58,9 +58,13 @@ public class MessageManager {
                 p.sendMessage(new TextComponent("§c你已经在一个公会中 无法创建新的公会"));
             }
         }),
-        SetCereer("SC", (m) -> {//设置玩家的职位 >> 工会名 操作者 目标玩家 职位
-            ProxiedPlayer p = BungeeCord.getInstance().getPlayer(m.getSender());
-            ProxiedPlayer tp = BungeeCord.getInstance().getPlayer(UUID.fromString(m.getData(0)));
+        SetCereer("SC", (m) -> {//设置玩家的职位 >> 工会名 操作者 目标玩家(名) 职位
+            ProxiedPlayer p = m.getSenderProxied();
+            ProxiedPlayer tp = BungeeCord.getInstance().getPlayer(m.getData(0));
+            if (tp == null || !tp.isConnected()) {
+                p.sendMessage(new TextComponent("§c找不到玩家"));
+                return;
+            }
             CereerType ct = CereerType.valueOf(m.getData(1));
             UserManager.operateUser(tp.getUniqueId(), (u) -> {
                 u.setCereer(ct);
@@ -92,25 +96,44 @@ public class MessageManager {
 //            }
 //            
         }),
-        ModifyMember("MM", (m) -> {//加入或提出指定玩家 >> 工会名 操作者 目标玩家 (+/-)
-            ProxiedPlayer tp = BungeeCord.getInstance().getPlayer(UUID.fromString(m.getData(0)));
+        ModifyMember("MM", (m) -> {//加入或提出指定玩家 >> 工会名 操作者 目标玩家(名) (+/-)
+            ProxiedPlayer tp = BungeeCord.getInstance().getPlayer(m.getData(0));
+            if (tp == null || !tp.isConnected()) {
+                m.getSenderProxied().sendMessage(new TextComponent("§c找不到玩家"));
+                return;
+            }
             Log log = Log.UnionLogs.get(m.getTargetUnion());
             switch (m.getData(1)) {
                 case "+":
                     UserManager.operateUser(tp.getUniqueId(), (u) -> {
                         u.setBelongsUnion(m.getTargetUnion());
                     });
+                    UnionManager.operateUnion(m.getTargetUnion(), (u) -> {
+                        u.getMembers().add(tp.getUniqueId());
+                    });
+                    Log.UnionLogs.get(m.getTargetUnion()).log("§6" + m.getSenderProxied().getName() + " 同意了 " + tp.getName() + " 的加入请求");
                     tp.sendMessage(new TextComponent("§6你成功加入了" + m.getTargetUnion() + " 工会"));
                     break;
                 case "-":
                     UserManager.operateUser(tp.getUniqueId(), (u) -> {
                         u.setBelongsUnion(null);
                     });
+                    UnionManager.operateUnion(m.getTargetUnion(), (u) -> {
+                        u.getMembers().remove(tp.getUniqueId());
+                    });
+                    Log.UnionLogs.get(m.getTargetUnion()).log("§6" + tp.getName() + " 退出了工会");
                     tp.sendMessage(new TextComponent("§6你成功离开了" + m.getTargetUnion() + " 工会"));
                     break;
             }
         }),
-        InvitePlayer("IP"),//邀请玩家 >> 工会名 操作者 目标玩家
+        InvitePlayer("IP", (m) -> {//邀请玩家 >> 工会名 操作者 目标玩家(名)
+            ProxiedPlayer tp = BungeeCord.getInstance().getPlayer(m.getData(0));
+            if (tp == null || !tp.isConnected()) {
+                m.getSenderProxied().sendMessage(new TextComponent("§c找不到玩家"));
+                return;
+            }
+            
+        }),
         UnionLevelUp("UL"),//升级工会 >> 工会名 操作者
         DonateMoney("DM"),//捐献资金 >> 工会名 操作者 金钱数
         ReadLog("RL", (m) -> {//查看LOG >> 工会名 请求玩家 页数(从0开始 最大9)
@@ -183,6 +206,10 @@ public class MessageManager {
         private String TargetUnion;
         private String Sender;
         private List<String> ExtraData = new ArrayList<>();
+
+        public ProxiedPlayer getSenderProxied() {
+            return BungeeCord.getInstance().getPlayer(this.getSender());
+        }
 
         public String getData(int index) {
             return ExtraData.get(index);
