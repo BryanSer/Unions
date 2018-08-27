@@ -127,12 +127,16 @@ public class MessageManager {
             }
         }),
         InvitePlayer("IP", (m) -> {//邀请玩家 >> 工会名 操作者 目标玩家(名)
+            if(m.getSender().equalsIgnoreCase(m.getData(0))){
+                m.getSenderProxied().sendMessage(new TextComponent("§c你不能邀请你自己"));
+                return;
+            }
             ProxiedPlayer tp = BungeeCord.getInstance().getPlayer(m.getData(0));
             if (tp == null || !tp.isConnected()) {
                 m.getSenderProxied().sendMessage(new TextComponent("§c找不到玩家"));
                 return;
             }
-            
+            //TODO
         }),
         UnionLevelUp("UL"),//升级工会 >> 工会名 操作者
         DonateMoney("DM"),//捐献资金 >> 工会名 操作者 金钱数
@@ -172,8 +176,18 @@ public class MessageManager {
             cb.append(next.create());
             p.sendMessage(cb.create());
         }),
-        Broadcost("BC")//发送公告 >> 工会名 操作者 信息
-        ;
+        Broadcost("BC", (m) -> {//发送公告 >> 工会名 操作者 信息
+            String msg = m.getData(0);
+            msg = String.format("§b§l[§e%s§b§l] §e§l[%s] §a >> %s", m.getTargetUnion(), m.getSender(), msg);
+            TextComponent text = new TextComponent(msg);
+            UnionManager.operateUnion(m.getTargetUnion(), (u) -> {
+                u.getMembers()
+                        .stream()
+                        .map(BungeeCord.getInstance()::getPlayer)
+                        .filter(p -> p != null && p.isConnected())
+                        .forEach(p -> p.sendMessage(text));
+            });
+        });
         private String Key;
         private static Map<String, MessageType> Index = new HashMap<>();
         private Consumer<Message> Function;
