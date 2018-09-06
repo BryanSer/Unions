@@ -10,4 +10,6 @@ Setting:
         '1':
             MaxMembers: 10
             MaxBank: 10000
-            
+            #升到这个等级所需要的花费
+            #1级的花费为创建工会的花费
+            UpPrice: 5000

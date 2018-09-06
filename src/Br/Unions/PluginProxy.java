@@ -63,7 +63,7 @@ public interface PluginProxy {
         try {
             Connection conn = DriverManager.getConnection(this.getSQLUrl());
             UnionManager.connect(conn);
-            UserManager.connect(conn);
+            UserManager.connect(conn); 
         } catch (SQLException ex) {
             Logger.getLogger(PluginProxy.class.getName()).log(Level.SEVERE, null, ex);
         }

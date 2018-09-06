@@ -20,16 +20,19 @@ public class UnionSetting {
     private int MaxMembers;
     private int MaxBank;
     private int Level;
+    private int UpPrice;
     
     public UnionSetting(Configuration config,int lv){//bungee
         this.Level = lv;
         this.MaxBank = config.getInt("MaxBank");
         this.MaxMembers = config.getInt("MaxMembers");
+        this.UpPrice = config.getInt("UpPrice");
     }
 
     public UnionSetting(ConfigurationSection config){//bukkit
         this.Level = Integer.parseInt(config.getName());
         this.MaxBank = config.getInt("MaxBank");
+        this.UpPrice = config.getInt("UpPrice");
         this.MaxMembers = config.getInt("MaxMembers");
     }
     

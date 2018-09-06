@@ -12,6 +12,7 @@ import Br.Unions.Data;
 import Br.Unions.SQL.UnionManager;
 import Br.Unions.SQL.UserManager;
 import Br.Unions.Union;
+import Br.Unions.UnionSetting;
 import Br.Unions.User;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,9 +34,9 @@ import org.bukkit.Bukkit;
  * @version 1.0
  */
 public class MessageManager {
-
+    
     public static final String MESSAGE_CHANNEL = "UNIONMESSAGER";
-
+    
     public enum MessageType {
         CreateUnion("CU", (m) -> {//创建或删除公会 >> 公会名 操作者 (+/-)
             ProxiedPlayer p = m.getSenderProxied();
@@ -158,10 +159,23 @@ public class MessageManager {
                     m.getSenderProxied().sendMessage(new TextComponent(String.format("§c[%s]拒绝了你的公会邀请", p.getName())));
                     return;
                 }
-                int member_size = UnionManager.operateUnion(m.getTargetUnion(), u -> {
-                    return u.getMembers().size();
+                int data[] = UnionManager.operateUnion(m.getTargetUnion(), u -> {
+                    return new int[]{u.getMembers().size(), u.getUnionLevel()};
                 });
-                
+                UnionSetting setting = Data.Plugin.getSetting(data[1]);
+                if (setting.getMaxMembers() <= data[0]) {
+                    p.sendMessage(new TextComponent("§c公会人数已满 无法加入"));
+                    m.getSenderProxied().sendMessage(new TextComponent("§c公会人数已满 对方无法加入"));
+                    return;
+                }
+                UserManager.operateUser(p.getUniqueId(), (u) -> {
+                    u.setBelongsUnion(m.getTargetUnion());
+                });
+                UnionManager.operateUnion(m.getTargetUnion(), u -> {
+                    u.getMembers().add(p.getUniqueId());
+                });
+                MessageManager.Brocast(m.TargetUnion, "系统", String.format("§6玩家[%s]受到<%s>的邀请 加入了工会", p.getName(), m.getSender()));
+                Log.UnionLogs.get(m.getTargetUnion()).log(String.format("§6玩家[%s]受到<%s>的邀请 加入了工会", p.getName(), m.getSender()));
             }, 15);
         }),
         UnionLevelUp("UL"),//升级工会 >> 工会名 操作者
@@ -180,7 +194,7 @@ public class MessageManager {
                 }
             }
             ComponentBuilder cb = new ComponentBuilder("");
-
+            
             ComponentBuilder prev = new ComponentBuilder("---<< Prev");
             if (page != 0) {
                 prev.color(ChatColor.GREEN);
@@ -189,9 +203,9 @@ public class MessageManager {
                 prev.color(ChatColor.GRAY);
             }
             cb.append(prev.create());
-
+            
             cb.append("§b" + (page + 1) + "/10");
-
+            
             ComponentBuilder next = new ComponentBuilder("Next >>---");
             if (page != 9) {
                 next.color(ChatColor.GREEN);
@@ -217,44 +231,57 @@ public class MessageManager {
         private String Key;
         private static Map<String, MessageType> Index = new HashMap<>();
         private Consumer<Message> Function;
-
+        
         private MessageType(String key) {
             this.Key = key;
         }
-
+        
         private MessageType(String key, Consumer<Message> func) {
             this.Key = key;
             this.Function = func;
         }
-
+        
         public Consumer<Message> getFunction() {
             return Function;
         }
-
+        
         public static MessageType getMessageType(String c) {
             return Index.get(c);
         }
-
+        
         public String getKey() {
             return Key;
         }
     }
-
+    
+    public static void Brocast(String uni, String sender, String msg) {
+        msg = String.format("§b§l[§e%s§b§l] §e§l[%s] §a >> %s", uni, sender, msg);
+        TextComponent text = new TextComponent(msg);
+        UnionManager.operateUnion(uni, (u) -> {
+            u.getMembers()
+                    .stream()
+                    .map(BungeeCord.getInstance()::getPlayer)
+                    .filter(p -> p != null && p.isConnected())
+                    .forEach(p -> p.sendMessage(text));
+        });
+        
+    }
+    
     public static class Message {
-
+        
         private MessageType Type;
         private String TargetUnion;
         private String Sender;
         private List<String> ExtraData = new ArrayList<>();
-
+        
         public ProxiedPlayer getSenderProxied() {
             return BungeeCord.getInstance().getPlayer(this.getSender());
         }
-
+        
         public String getData(int index) {
             return ExtraData.get(index);
         }
-
+        
         public static Message decodeMessage(String msg) {
             String s[] = msg.split("\\|");
             Message m = new Message();
@@ -266,36 +293,36 @@ public class MessageManager {
             }
             return m;
         }
-
+        
         private Message() {
         }
-
+        
         public static Message newMessage() {
             return new Message();
         }
-
+        
         public Message type(MessageType t) {
             this.Type = t;
             return this;
         }
-
+        
         public Message union(String u) {
             this.TargetUnion = u;
             return this;
         }
-
+        
         public Message sender(String s) {
             this.Sender = s;
             return this;
         }
-
+        
         public Message data(String... s) {
             for (String ss : s) {
                 ExtraData.add(ss);
             }
             return this;
         }
-
+        
         public void sendMessage() {
             String msg = this.Type.getKey() + "|" + this.TargetUnion + "|" + this.Sender;
             for (String s : ExtraData) {
@@ -307,23 +334,23 @@ public class MessageManager {
                     break;
             }
         }
-
+        
         public MessageType getType() {
             return Type;
         }
-
+        
         public String getTargetUnion() {
             return TargetUnion;
         }
-
+        
         public String getSender() {
             return Sender;
         }
-
+        
         public List<String> getExtraData() {
             return ExtraData;
         }
-
+        
     }
-
+    
 }
