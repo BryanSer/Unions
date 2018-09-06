@@ -6,7 +6,7 @@
  */
 package Br.Unions.Bungee;
 
-import Br.Unions.APIs.MessageManager;
+import Br.Unions.API.MessageManager;
 import Br.Unions.PluginProxy;
 import java.io.File;
 import java.io.FileFilter;

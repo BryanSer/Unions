@@ -4,7 +4,7 @@
  * 保留一切所有权
  * 若为Bukkit插件 请前往plugin.yml查看剩余协议
  */
-package Br.Unions.APIs;
+package Br.Unions.API;
 
 import Br.Unions.Data;
 import java.util.ArrayList;

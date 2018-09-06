@@ -6,7 +6,7 @@
  */
 package Br.Unions;
 
-import Br.Unions.APIs.MessageManager;
+import Br.Unions.API.MessageManager;
 import java.io.File;
 import java.io.InputStream;
 import net.md_5.bungee.api.plugin.Plugin;

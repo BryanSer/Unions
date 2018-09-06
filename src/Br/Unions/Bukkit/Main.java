@@ -6,7 +6,7 @@
  */
 package Br.Unions.Bukkit;
 
-import Br.Unions.APIs.MessageManager;
+import Br.Unions.API.MessageManager;
 import Br.Unions.PluginProxy;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
