@@ -127,7 +127,7 @@ public class MessageManager {
             }
         }),
         InvitePlayer("IP", (m) -> {//邀请玩家 >> 工会名 操作者 目标玩家(名)
-            if(m.getSender().equalsIgnoreCase(m.getData(0))){
+            if (m.getSender().equalsIgnoreCase(m.getData(0))) {
                 m.getSenderProxied().sendMessage(new TextComponent("§c你不能邀请你自己"));
                 return;
             }
@@ -137,6 +137,32 @@ public class MessageManager {
                 return;
             }
             //TODO
+            boolean hasUni = UserManager.operateUser(tp.getUniqueId(), (u) -> {
+                return u.hasUnion();
+            });
+            if (hasUni) {
+                m.getSenderProxied().sendMessage(new TextComponent("§c对方已经在一个公会里了"));
+                return;
+            }
+            tp.sendMessage(new TextComponent(String.format("§6玩家[%s]向你发送了一个加入<%s>公会的请求", m.getSender(), m.getTargetUnion())));
+            BungeeButtonMessager.SendButtonRequest(tp, new String[]{"§b[同意加入]", "§c[拒绝加入]"}, (p, i) -> {
+                if (i == null || i == 1) {
+                    m.getSenderProxied().sendMessage(new TextComponent(String.format("§c[%s]拒绝了你的公会邀请", p.getName())));
+                    return;
+                }
+                boolean has = UserManager.operateUser(tp.getUniqueId(), u -> {
+                    return u.hasUnion();
+                });
+                if (has) {
+                    p.sendMessage(new TextComponent("§c你已经在一个公会里了"));
+                    m.getSenderProxied().sendMessage(new TextComponent(String.format("§c[%s]拒绝了你的公会邀请", p.getName())));
+                    return;
+                }
+                int member_size = UnionManager.operateUnion(m.getTargetUnion(), u -> {
+                    return u.getMembers().size();
+                });
+                
+            }, 15);
         }),
         UnionLevelUp("UL"),//升级工会 >> 工会名 操作者
         DonateMoney("DM"),//捐献资金 >> 工会名 操作者 金钱数
