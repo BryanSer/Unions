@@ -6,6 +6,7 @@
  */
 package Br.Unions;
 
+import Br.Unions.SQL.UserManager;
 import java.io.Serializable;
 import java.util.UUID;
 import org.bukkit.Bukkit;
@@ -26,6 +27,30 @@ public class User implements Serializable {
     private CereerType Cereer;
     private int Contribution;
     private double Donate;
+
+    public static class GET {
+
+        public static String getBelongsUnion(UUID uid) {
+            return UserManager.operateUser(uid, User::getBelongsUnion, false);
+        }
+
+        public static CereerType getCereer(UUID uid) {
+            return UserManager.operateUser(uid, User::getCereer, false);
+        }
+
+        public static int getContribution(UUID uid) {
+            return UserManager.operateUser(uid, User::getContribution, false);
+        }
+
+        public static double getDonate(UUID uid) {
+            return UserManager.operateUser(uid, User::getDonate, false);
+        }
+
+        public static boolean hasUnion(UUID uid) {
+            Boolean has = UserManager.operateUser(uid, User::hasUnion, false);
+            return has == null ? false : has;
+        }
+    }
 
     public User(UUID uid, String name) {
         this.UUID = uid;
