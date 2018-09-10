@@ -34,17 +34,15 @@ import org.bukkit.Bukkit;
  * @version 1.0
  */
 public class MessageManager {
-    
+
     public static final String MESSAGE_CHANNEL = "UNIONMESSAGER";
-    
+
     public enum MessageType {
         CreateUnion("CU", (m) -> {//创建或删除公会 >> 公会名 操作者 (+/-)
             ProxiedPlayer p = m.getSenderProxied();
-            Boolean has = UserManager.operateUser(p.getUniqueId(), User::hasUnion);
-            if (has == null || !has) {
-                boolean hasuni = UnionManager.operateUnion(m.getTargetUnion(), (t) -> {
-                });
-                if (hasuni) {
+            boolean has = User.GET.hasUnion(p.getUniqueId());
+            if (!has) {
+                if (Union.OPT.hasUnion(m.getTargetUnion())) {
                     p.sendMessage(new TextComponent("§c已存在同名的公会了"));
                     return;
                 }
@@ -70,7 +68,7 @@ public class MessageManager {
             UserManager.operateUser(tp.getUniqueId(), (u) -> {
                 u.setCereer(ct);
             });
-            String u = UserManager.operateUser(p.getUniqueId(), User::getBelongsUnion);
+            String u = User.GET.getBelongsUnion(p.getUniqueId());
             p.sendMessage(new TextComponent("§6操作完成"));
             tp.sendMessage(new TextComponent("§6你在工会的职位已经被设置为: " + ct.getName()));
 //            Boolean has = UserManager.operateUser(p.getUniqueId(), User::hasUnion); //以下代码希望能在bukkit完成判断
@@ -138,9 +136,7 @@ public class MessageManager {
                 return;
             }
             //TODO
-            boolean hasUni = UserManager.operateUser(tp.getUniqueId(), (u) -> {
-                return u.hasUnion();
-            });
+            boolean hasUni = User.GET.hasUnion(tp.getUniqueId());
             if (hasUni) {
                 m.getSenderProxied().sendMessage(new TextComponent("§c对方已经在一个公会里了"));
                 return;
@@ -151,9 +147,7 @@ public class MessageManager {
                     m.getSenderProxied().sendMessage(new TextComponent(String.format("§c[%s]拒绝了你的公会邀请", p.getName())));
                     return;
                 }
-                boolean has = UserManager.operateUser(tp.getUniqueId(), u -> {
-                    return u.hasUnion();
-                });
+                boolean has = User.GET.hasUnion(tp.getUniqueId());
                 if (has) {
                     p.sendMessage(new TextComponent("§c你已经在一个公会里了"));
                     m.getSenderProxied().sendMessage(new TextComponent(String.format("§c[%s]拒绝了你的公会邀请", p.getName())));
@@ -161,7 +155,7 @@ public class MessageManager {
                 }
                 int data[] = UnionManager.operateUnion(m.getTargetUnion(), u -> {
                     return new int[]{u.getMembers().size(), u.getUnionLevel()};
-                });
+                }, false);
                 UnionSetting setting = Data.Plugin.getSetting(data[1]);
                 if (setting.getMaxMembers() <= data[0]) {
                     p.sendMessage(new TextComponent("§c公会人数已满 无法加入"));
@@ -178,7 +172,28 @@ public class MessageManager {
                 Log.UnionLogs.get(m.getTargetUnion()).log(String.format("§6玩家[%s]受到<%s>的邀请 加入了工会", p.getName(), m.getSender()));
             }, 15);
         }),
-        UnionLevelUp("UL"),//升级工会 >> 工会名 操作者
+        UnionLevelUp("UL", (m) -> { //升级工会 >> 工会名 操作者
+            CereerType type = User.GET.getCereer(m.getSenderProxied().getUniqueId());
+            if (type != CereerType.Owner) {
+                m.getSenderProxied().sendMessage(new TextComponent("§c你没有升级工会的权限"));
+                return;
+            }
+            int lv = Union.OPT.getUnionLevel(m.getTargetUnion());
+            if (lv >= Data.Plugin.getMaxUnionLevel()) {
+                m.getSenderProxied().sendMessage(new TextComponent("§6您的工会已经满级了"));
+                return;
+            }
+            UnionSetting setting = Data.Plugin.getSetting(lv + 1);
+            MessageManager.Brocast(m.getTargetUnion(), "工会公告", "§6工会开始尝试升级 预计花费工会资金: " + setting.getUpPrice());
+            int bank = Union.OPT.getBank(m.getTargetUnion());
+            if (bank < setting.getUpPrice()) {
+                MessageManager.Brocast(m.getTargetUnion(), "工会公告", "§6工会升级失败, 原因: 工会资金不足");
+                return;
+            }
+            Union.OPT.setBank(m.getTargetUnion(), bank - setting.getUpPrice());
+            MessageManager.Brocast(m.getTargetUnion(), "工会公告", "§6工会升级完成 目前工会等级为: "
+                    + setting.getLevel() + "最大成员上限为: " + setting.getMaxMembers() + ", 最大银行容量: " + setting.getMaxBank());
+        }),
         DonateMoney("DM"),//捐献资金 >> 工会名 操作者 金钱数
         ReadLog("RL", (m) -> {//查看LOG >> 工会名 请求玩家 页数(从0开始 最大9)
             ProxiedPlayer p = BungeeCord.getInstance().getPlayer(m.getSender());
@@ -194,7 +209,7 @@ public class MessageManager {
                 }
             }
             ComponentBuilder cb = new ComponentBuilder("");
-            
+
             ComponentBuilder prev = new ComponentBuilder("---<< Prev");
             if (page != 0) {
                 prev.color(ChatColor.GREEN);
@@ -203,9 +218,9 @@ public class MessageManager {
                 prev.color(ChatColor.GRAY);
             }
             cb.append(prev.create());
-            
+
             cb.append("§b" + (page + 1) + "/10");
-            
+
             ComponentBuilder next = new ComponentBuilder("Next >>---");
             if (page != 9) {
                 next.color(ChatColor.GREEN);
@@ -231,29 +246,29 @@ public class MessageManager {
         private String Key;
         private static Map<String, MessageType> Index = new HashMap<>();
         private Consumer<Message> Function;
-        
+
         private MessageType(String key) {
             this.Key = key;
         }
-        
+
         private MessageType(String key, Consumer<Message> func) {
             this.Key = key;
             this.Function = func;
         }
-        
+
         public Consumer<Message> getFunction() {
             return Function;
         }
-        
+
         public static MessageType getMessageType(String c) {
             return Index.get(c);
         }
-        
+
         public String getKey() {
             return Key;
         }
     }
-    
+
     public static void Brocast(String uni, String sender, String msg) {
         msg = String.format("§b§l[§e%s§b§l] §e§l[%s] §a >> %s", uni, sender, msg);
         TextComponent text = new TextComponent(msg);
@@ -264,24 +279,24 @@ public class MessageManager {
                     .filter(p -> p != null && p.isConnected())
                     .forEach(p -> p.sendMessage(text));
         });
-        
+
     }
-    
+
     public static class Message {
-        
+
         private MessageType Type;
         private String TargetUnion;
         private String Sender;
         private List<String> ExtraData = new ArrayList<>();
-        
+
         public ProxiedPlayer getSenderProxied() {
             return BungeeCord.getInstance().getPlayer(this.getSender());
         }
-        
+
         public String getData(int index) {
             return ExtraData.get(index);
         }
-        
+
         public static Message decodeMessage(String msg) {
             String s[] = msg.split("\\|");
             Message m = new Message();
@@ -293,36 +308,36 @@ public class MessageManager {
             }
             return m;
         }
-        
+
         private Message() {
         }
-        
+
         public static Message newMessage() {
             return new Message();
         }
-        
+
         public Message type(MessageType t) {
             this.Type = t;
             return this;
         }
-        
+
         public Message union(String u) {
             this.TargetUnion = u;
             return this;
         }
-        
+
         public Message sender(String s) {
             this.Sender = s;
             return this;
         }
-        
+
         public Message data(String... s) {
             for (String ss : s) {
                 ExtraData.add(ss);
             }
             return this;
         }
-        
+
         public void sendMessage() {
             String msg = this.Type.getKey() + "|" + this.TargetUnion + "|" + this.Sender;
             for (String s : ExtraData) {
@@ -334,23 +349,23 @@ public class MessageManager {
                     break;
             }
         }
-        
+
         public MessageType getType() {
             return Type;
         }
-        
+
         public String getTargetUnion() {
             return TargetUnion;
         }
-        
+
         public String getSender() {
             return Sender;
         }
-        
+
         public List<String> getExtraData() {
             return ExtraData;
         }
-        
+
     }
-    
+
 }

@@ -47,6 +47,10 @@ public class UnionSetting {
     public int getLevel() {
         return Level;
     }
+
+    public int getUpPrice() {
+        return UpPrice;
+    }
     
     
 }
